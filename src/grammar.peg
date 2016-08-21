@@ -1,0 +1,224 @@
+// http://pegjs.org/online
+
+start
+    = equation
+
+equation
+    = left:expression _ '=' _ right:expression {
+        return {
+            type: 'EQUATION',
+            left: left,
+            right: right,
+        };
+    }
+    / expression
+
+expression
+    = head:product tail:(_ plusMinusOp _ product)+ {
+        const children = [head];
+        tail.forEach(x => {
+            const y = x.filter(i => !/^[ ]*$/.test(i));
+            children.push(...y);
+        });
+
+        // TODO: think about how to collapse complex numbers
+
+        return {
+            type: 'EXPRESSION',
+            children: children,
+        };
+    }
+    / product
+
+plusMinusOp
+    = op:[+-] {
+        return {
+            type: 'OPERATOR',
+            operator: op,
+        };
+    }
+
+product
+    = head:fraction tail:(_ mulOp _ fraction)+ {
+        const children = [head];
+        tail.forEach(x => {
+            const y = x.filter(i => !/^[ ]*$/.test(i));
+            children.push(...y);
+        });
+
+        return {
+            type: 'PRODUCT',
+            children: children,
+        };
+    }
+    / func
+    / head:(number / identifier) 'i' {
+        return {
+            type: 'COMPLEX',
+            real: 0,
+            imag: head
+        };
+    }
+    / head:(number / identifier) tail:(power)+ {
+        const children = [head];
+        tail.forEach((factor) => {
+            children.push({
+                type: 'OPERATOR',
+                value: '*',
+            });
+            children.push(factor);
+        });
+
+        return {
+            type: 'PRODUCT',
+            children: children,
+        };
+    }
+    / fraction
+
+mulOp
+    = '*' {
+        return {
+            type: 'OPERATOR',
+            operator: '*',
+        };
+    }
+
+fraction
+    = numerator:factor '/' denominator:factor {
+        return {
+            type: 'FRACTION',
+            numerator: numerator,
+            denominator: denominator,
+        };
+    }
+    / power
+
+power
+    = base:factor '^' exponent:factor {
+        return {
+            type: 'POWER',
+            base: base,
+            exponent: exponent,
+        };
+    }
+    / factor
+
+factor
+    = atom
+    / sign:'-'? '(' expression:expression ')' {
+        if (sign) {
+            return {
+                type: 'NEGATION',
+                value: expression,
+            };
+        } else {
+            return expression;
+        }
+    }
+
+atom
+    = number
+    / tuple
+    / matrix
+    / func
+    / identifier
+
+tuple
+    = '(' head:expression tail:(',' _ expression)+ ')' {
+        const values = [head];
+        tail.forEach(x => {
+            const y = x.filter(i => !/^[ ]*$/.test(i) && i !== ',');
+            values.push(...y);
+        });
+
+        return {
+            type: 'TUPLE',
+            values: values,
+        };
+    }
+
+matrix
+    = '[' head:matrix_row tail:('\n' matrix_row)* ']' {
+        const values = [head];
+        tail.forEach(x => {
+            const y = x.filter(i => !/^[ ]*$/.test(i) && i !== '\n');
+            values.push(...y);
+        });
+
+        return {
+            type: 'MATRIX',
+            values: values,
+        };
+    }
+
+matrix_row
+    = head:expression tail:(' ' expression)* {
+        const values = [head];
+        tail.forEach(x => {
+            const y = x.filter(i => !/^[ ]*$/.test(i));
+            values.push(...y);
+        });
+
+        return {
+            type: 'MATRIX_ROW',
+            values: values,
+        };
+    }
+
+func
+    = name:('cos' / 'sin' / 'tan' / 'sqrt' / 'abs' / 'dot' / 'cross') '(' arg:expression ')' {
+        return {
+            type: 'FUNC',
+            name: name,
+            arg: arg
+        };
+    }
+
+identifier
+    = sign:'-'? char:[a-zA-Z] {
+        const result = {
+            type: 'IDENTIFIER',
+            name: char,
+        };
+        if (sign) {
+            return {
+                type: 'NEGATION',
+                value: result,
+            };
+        } else {
+            return result;
+        }
+    }
+
+// decimal
+number_frac
+    = "." chars:[0-9]*
+        { return "." + chars.join(''); }
+
+number
+    = sign:'-'? chars:[0-9]+ frac:number_frac? {
+        var value = sign ? sign : '' + chars.join('');
+
+        if (frac) {
+            value += frac;
+        }
+
+        return {
+            type: 'NUMBER',
+            value: value,
+        };
+    }
+    / sign: '-'? "." chars:[0-9]+ {
+        const value = (sign ? sign : '') + '.' + chars.join('');
+
+        return {
+            type: 'NUMBER',
+            value: value,
+        };
+    }
+
+_ "whitespace"
+    = chars:[ \t\n\r]* {
+        return chars.join('');
+    }

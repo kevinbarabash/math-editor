@@ -1,0 +1,24 @@
+{
+  "name": "math-editor",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack",
+    "watch": "webpack -w"
+  },
+  "author": "Kevin Barabash <kevinb@khanacademy.org>",
+  "license": "MIT",
+  "dependencies": {
+    "pegjs": "^0.9.0"
+  },
+  "devDependencies": {
+    "babel-core": "^6.9.1",
+    "babel-loader": "^6.2.4",
+    "babel-preset-es2015": "^6.9.0",
+    "json-loader": "^0.5.4",
+    "raw-loader": "^0.5.1",
+    "webpack": "^1.13.1"
+  }
+}
